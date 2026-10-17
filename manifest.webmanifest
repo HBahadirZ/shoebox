@@ -1,0 +1,43 @@
+{
+  "id": "./",
+  "name": "Shoebox: Receipt & Warranty Vault",
+  "short_name": "Shoebox",
+  "description": "Snap a receipt and Shoebox reads it on your PC, then reminds you before a warranty or return window ends. Private, offline, no account.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#F7F2E8",
+  "theme_color": "#0F5F55",
+  "orientation": "any",
+  "categories": ["productivity", "utilities", "finance"],
+  "icons": [
+    { "src": "icons/icon-48.png", "sizes": "48x48", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "screenshots": [
+    { "src": "store-assets/screenshot-1-attention.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "See what is about to expire" },
+    { "src": "store-assets/screenshot-2-review.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Receipt read on your PC" },
+    { "src": "store-assets/screenshot-3-all.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "All receipts in one searchable place" },
+    { "src": "store-assets/screenshot-4-dark.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Follows Windows dark mode" }
+  ],
+  "file_handlers": [
+    { "action": "./", "accept": { "image/jpeg": [".jpg", ".jpeg"], "image/png": [".png"], "image/webp": [".webp"] } }
+  ],
+  "share_target": {
+    "action": "./share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": { "files": [{ "name": "receipts", "accept": ["image/*"] }] }
+  },
+  "launch_handler": { "client_mode": "focus-existing" },
+  "shortcuts": [
+    { "name": "Add receipt", "short_name": "Add", "url": "./?action=add", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "All receipts", "short_name": "All", "url": "./?view=all", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

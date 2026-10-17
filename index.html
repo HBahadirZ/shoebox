@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Shoebox</title>
+  <meta name="description" content="Receipt and warranty vault. Snap a receipt, Shoebox reads it on your PC and reminds you before a warranty or return window ends.">
+  <meta name="theme-color" content="#0F5F55">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="preload" href="fonts/fraunces-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-view="attention">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <div class="brand"><img src="icons/icon.svg" alt="" width="30" height="30"><span>Shoebox</span></div>
+      <nav class="tabs" aria-label="Sections">
+        <button data-action="view" data-view="attention">Needs attention <span id="attnCount" class="count" hidden>0</span></button>
+        <button data-action="view" data-view="all">All receipts</button>
+      </nav>
+      <span class="spacer"></span>
+      <button class="btn primary" data-action="add"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg><span>Add receipt</span></button>
+      <span id="proBadge" class="pro-badge" hidden>Pro</span>
+      <button id="getPro" class="btn gold" data-action="open-pro">Get Pro</button>
+      <button class="icon-btn" data-action="open-settings" aria-label="Settings">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h8M15 5.5h2M3 10h2M9 10h8M3 14.5h6M13 14.5h4"/><circle cx="13" cy="5.5" r="2"/><circle cx="7" cy="10" r="2"/><circle cx="11" cy="14.5" r="2"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" class="main" tabindex="-1"></main>
+
+  <div class="drop-hint" aria-hidden="true"><p>Drop receipt photos or PDFs-as-images here</p></div>
+
+  <dialog id="addDialog" aria-labelledby="addTitle">
+    <div class="dlg">
+      <h2 id="addTitle">Add a receipt</h2>
+      <div id="dropzone" class="dropzone">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M12 6h24v36l-4-3-4 3-4-3-4 3-4-3-4 3z"/><path d="M18 16h12M18 23h12M18 30h7"/></svg>
+        <p><strong>Drop a receipt photo here</strong>, paste one with Ctrl+V, or:</p>
+        <div class="row">
+          <button class="btn primary" data-action="pick">Choose photos</button>
+          <button class="btn" data-action="camera" id="cameraBtn">Use camera</button>
+          <button class="btn" data-action="manual">Type it in</button>
+        </div>
+        <p class="fine">Shoebox reads the receipt on this PC. The photo is never uploaded.</p>
+      </div>
+      <input id="filePick" type="file" accept="image/*" multiple hidden>
+      <div id="cameraBox" class="camera" hidden>
+        <video id="camVideo" playsinline muted></video>
+        <div class="row"><button class="btn primary" data-action="snap">Take photo</button><button class="btn" data-action="stop-camera">Cancel</button></div>
+      </div>
+      <div class="dialog-actions"><button class="btn" data-action="close-dialog">Close</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="scanDialog" aria-labelledby="scanTitle">
+    <div class="dlg scan">
+      <h2 id="scanTitle">Reading receipt…</h2>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i id="scanBar"></i></div>
+      <p id="scanNote" class="fine">Starting the on-device reader.</p>
+    </div>
+  </dialog>
+
+  <dialog id="itemDialog" aria-labelledby="itemTitle">
+    <form id="itemForm" method="dialog" class="item-form">
+      <h2 id="itemTitle">Check the details</h2>
+      <p id="itemHint" class="hint-banner" hidden></p>
+      <div class="item-grid">
+        <figure class="photo" id="itemPhoto"><figcaption>No photo</figcaption></figure>
+        <div class="fields">
+          <label class="field wide"><span class="label">What did you buy?</span><span class="control"><input id="f-name" required maxlength="80" placeholder="e.g. Living room TV"></span></label>
+          <label class="field"><span class="label">Store</span><span class="control"><input id="f-store" maxlength="60"></span></label>
+          <label class="field"><span class="label">Purchase date</span><span class="control"><input id="f-date" type="date" required></span></label>
+          <label class="field"><span class="label">Price</span><span class="control"><input id="f-price" inputmode="decimal"></span></label>
+          <label class="field"><span class="label">Currency</span><select id="f-currency"></select></label>
+          <label class="field"><span class="label">Warranty</span>
+            <select id="f-warranty"><option value="0">None</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">1 year</option><option value="24">2 years</option><option value="36">3 years</option><option value="60">5 years</option><option value="120">10 years</option><option value="-1">Lifetime</option></select></label>
+          <label class="field"><span class="label">Return window</span>
+            <select id="f-return"><option value="0">None</option><option value="14">14 days</option><option value="15">15 days</option><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></label>
+          <label class="field"><span class="label">Category</span>
+            <select id="f-category"><option value="">—</option><option>Electronics</option><option>Appliances</option><option>Tools</option><option>Furniture</option><option>Clothing</option><option>Other</option></select></label>
+          <label class="field wide"><span class="label">Notes</span><span class="control"><textarea id="f-notes" rows="2" maxlength="400" placeholder="Serial number, order number…"></textarea></span></label>
+        </div>
+      </div>
+      <p id="itemCover" class="cover-line" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button type="button" id="delBtn" class="btn danger" data-action="delete-item" hidden>Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" data-action="cancel-item">Cancel</button>
+        <button type="submit" class="btn primary" id="saveBtn">Save receipt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="photoDialog" aria-label="Receipt photo"><img id="bigPhoto" alt="Receipt photo"><div class="dialog-actions"><button class="btn" data-action="close-dialog">Close</button></div></dialog>
+
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="dlg">
+      <h2 id="settingsTitle">Settings</h2>
+      <div class="grid">
+        <label class="field"><span class="label">Your currency</span><select id="set-currency"></select></label>
+        <label class="field"><span class="label">Dates like 03/10/2026 mean</span>
+          <select id="set-dayFirst"><option value="0">March 10 (month first)</option><option value="1">3 October (day first)</option></select></label>
+        <label class="field"><span class="label">Default warranty</span>
+          <select id="set-warranty"><option value="0">None</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">1 year</option><option value="24">2 years</option><option value="36">3 years</option></select></label>
+        <label class="field"><span class="label">Default return window</span>
+          <select id="set-return"><option value="0">None</option><option value="14">14 days</option><option value="15">15 days</option><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></label>
+      </div>
+      <h3>Your data</h3>
+      <p class="block-note">Everything is stored on this PC only. Back it up before moving to a new computer.</p>
+      <div class="row wrap">
+        <button class="btn" data-action="backup">Save backup file</button>
+        <button class="btn" data-action="restore">Restore backup</button>
+        <button class="btn" data-action="export-csv">Export CSV <span class="tag">Pro</span></button>
+        <button class="btn" data-action="export-ics">Calendar reminders <span class="tag">Pro</span></button>
+      </div>
+      <input id="restorePick" type="file" accept="application/json,.json" hidden>
+      <div class="row wrap"><button class="btn danger" data-action="wipe">Delete all receipts…</button></div>
+      <p class="fine">Shoebox does not collect or send your data. <a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a> · <a id="supportLink" href="#">Support</a></p>
+      <div class="dialog-actions"><button class="btn primary" data-action="close-dialog">Done</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="proDialog" aria-labelledby="proTitle">
+    <div class="dlg pro-dialog">
+      <h2 id="proTitle">Shoebox Pro</h2>
+      <p id="proReason" class="pro-reason" hidden></p>
+      <ul class="pro-list">
+        <li>Unlimited receipts (the free version holds 20)</li>
+        <li>Calendar reminders for every warranty and return deadline</li>
+        <li>CSV export for insurance claims and bookkeeping</li>
+        <li>One payment, no subscription, no account</li>
+      </ul>
+      <p class="pro-price"><span id="proPrice">$3.99</span> once.</p>
+      <p id="proOwned" class="pro-owned" hidden>Pro is unlocked on this Microsoft account.</p>
+      <p id="proStoreNote" class="block-note" hidden>Pro is sold through the Microsoft Store version of Shoebox. <a id="proStoreLink" href="#" target="_blank" rel="noopener">Get Shoebox from the Microsoft Store</a></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-action="close-dialog">Not now</button>
+        <button type="button" id="restorePro" class="btn" data-action="restore-pro">Restore purchase</button>
+        <button type="button" id="buyPro" class="btn primary" data-action="buy-pro">Get Pro</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="confirmDialog" aria-labelledby="confirmTitle">
+    <div class="dlg"><h2 id="confirmTitle">Are you sure?</h2><p id="confirmText"></p>
+      <div class="dialog-actions"><button class="btn" data-action="confirm-no">Cancel</button><button class="btn danger" data-action="confirm-yes">Delete</button></div></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
